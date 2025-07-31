@@ -97,33 +97,6 @@ Design-Patterns/
    java -cp src LLD.designpatterns.strategy.Main
    ```
 
-## 🔍 Design Pattern Details
-
-### 💳 **Strategy Pattern**
-**Problem**: Need to switch between different payment algorithms at runtime  
-**Solution**: Encapsulate payment algorithms in separate strategy classes
-
-**Key Components**:
-- `PaymentStrategy` - Strategy interface
-- `CreditCardStrategy` - Concrete strategy for card payments
-- `UpIPaymentStrategy` - Concrete strategy for UPI payments  
-- `ShoppingCart` - Context class that uses strategies
-
-**Benefits**:
-- ✅ Runtime algorithm selection
-- ✅ Easy to add new payment methods
-- ✅ Follows Open/Closed Principle
-- ✅ Eliminates conditional statements
-
-**Example Usage**:
-```java
-ShoppingCart cart = new ShoppingCart();
-cart.setStrategy(new CreditCardStrategy());
-cart.checkout(1000); // Uses credit card payment
-
-cart.setStrategy(new UpIPaymentStrategy());  
-cart.checkout(500);  // Uses UPI payment
-```
 
 ## ▶️ Running the Examples
 
