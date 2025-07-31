@@ -1,4 +1,4 @@
-package LLD.hashmap;
+package hashmap;
 
 public class Node<K, V> {
     private K key;

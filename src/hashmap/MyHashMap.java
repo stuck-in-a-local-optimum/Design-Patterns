@@ -1,4 +1,4 @@
-package LLD.hashmap;
+package hashmap;
 
 public class MyHashMap<K, V> {
     private static int INITIAL_CAPACITY = 1 << 4; //fancy way to write 1*2^4 = 16

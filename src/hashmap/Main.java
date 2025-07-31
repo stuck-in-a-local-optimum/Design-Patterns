@@ -1,4 +1,4 @@
-package LLD.hashmap;
+package hashmap;
 
 import java.util.Random;
 
