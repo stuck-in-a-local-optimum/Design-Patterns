@@ -27,24 +27,17 @@ This repository contains implementations of classical design patterns that solve
 
 ## 🎨 Design Patterns Implemented
 
-### ✅ **Currently Available**
-
 | Pattern | Type | Status | Description |
 |---------|------|--------|-------------|
 | **Strategy** | Behavioral | ✅ Live | Payment processing with interchangeable algorithms |
-
-### 🚧 **Coming Soon**
-
-| Pattern | Type | Implementation |
-|---------|------|----------------|
-| **Factory** | Creational | Shape creation with runtime type selection |
-| **Abstract Factory** | Creational | Vehicle manufacturing families (BMW, Tata) |
-| **Builder** | Creational | Burger meal construction with optional components |
-| **Decorator** | Structural | Pizza customization with dynamic toppings |
-| **Observer** | Behavioral | iPhone stock notification system |
-| **Chain of Responsibility** | Behavioral | Logger chain with different levels |
-| **Null Object** | Behavioral | Animal handling without null checks |
-| **State + Strategy** | Behavioral | Vending machine with multiple payment methods |
+| **Factory** | Creational | ✅ Live | Shape creation with runtime type selection |
+| **Abstract Factory** | Creational | ✅ Live | Vehicle manufacturing families (BMW, Tata) |
+| **Builder** | Creational | 📝 Available | Burger meal construction with optional components |
+| **Decorator** | Structural | 📝 Available | Pizza customization with dynamic toppings |
+| **Observer** | Behavioral | 📝 Available | iPhone stock notification system |
+| **Chain of Responsibility** | Behavioral | 📝 Available | Logger chain with different levels |
+| **Null Object** | Behavioral | 📝 Available | Animal handling without null checks |
+| **State + Strategy** | Behavioral | 📝 Available | Vending machine with multiple payment methods |
 
 ## 📁 Project Structure
 
@@ -53,20 +46,28 @@ Design-Patterns/
 ├── src/
 │   └── LLD/
 │       └── designpatterns/
-│           ├── strategy/           # Strategy Pattern
+│           ├── strategy/           # ✅ Strategy Pattern (Live)
 │           │   ├── PaymentStrategy.java
 │           │   ├── CreditCardStrategy.java
 │           │   ├── UpIPaymentStrategy.java
 │           │   ├── ShoppingCart.java
 │           │   └── Main.java
-│           ├── factory/            # Factory Pattern (coming soon)
-│           ├── abstractfactory/    # Abstract Factory Pattern (coming soon)
-│           ├── builderpattern/     # Builder Pattern (coming soon)
-│           ├── Decorator/          # Decorator Pattern (coming soon)
-│           ├── observer/           # Observer Pattern (coming soon)
-│           ├── cor/                # Chain of Responsibility (coming soon)
-│           ├── nullobjectpattern/  # Null Object Pattern (coming soon)
-│           └── vendingmachine/     # State + Strategy Pattern (coming soon)
+│           ├── factory/            # ✅ Factory Pattern (Live)
+│           │   ├── Shape.java
+│           │   ├── Circle.java, Rectangle.java, Square.java
+│           │   ├── ShapeFactory.java
+│           │   └── main.java
+│           ├── abstractfactory/    # ✅ Abstract Factory Pattern (Live)
+│           │   ├── VehicleFactory.java
+│           │   ├── concretefactories/
+│           │   ├── concreteproducts/
+│           │   └── products/
+│           ├── builderpattern/     # 📝 Builder Pattern
+│           ├── Decorator/          # 📝 Decorator Pattern
+│           ├── observer/           # 📝 Observer Pattern
+│           ├── cor/                # 📝 Chain of Responsibility
+│           ├── nullobjectpattern/  # 📝 Null Object Pattern
+│           └── vendingmachine/     # 📝 State + Strategy Pattern
 ├── README.md
 └── .gitignore
 ```
@@ -133,7 +134,13 @@ Each design pattern includes a `Main.java` file with comprehensive demonstration
 javac -cp src src/LLD/designpatterns/strategy/Main.java
 java -cp src LLD.designpatterns.strategy.Main
 
-# More patterns coming soon...
+# Factory Pattern
+javac -cp src src/LLD/designpatterns/factory/main.java
+java -cp src LLD.designpatterns.factory.main
+
+# Abstract Factory Pattern
+javac -cp src src/LLD/designpatterns/abstractfactory/main.java
+java -cp src LLD.designpatterns.abstractfactory.main
 ```
 
 ## 🎯 Learning Objectives
