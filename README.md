@@ -164,11 +164,10 @@ Contributions are welcome! Here's how you can help:
 - Write clean, readable code
 - Test your implementations thoroughly
 
-## 📚 Resources
+## 💡 About This Implementation
 
-- [Design Patterns: Elements of Reusable Object-Oriented Software](https://en.wikipedia.org/wiki/Design_Patterns) - The original Gang of Four book
-- [Refactoring Guru - Design Patterns](https://refactoring.guru/design-patterns) - Excellent visual explanations
-- [Java Design Patterns](https://java-design-patterns.com/) - Java-specific implementations
+These design patterns were **implemented independently** as learning exercises, 
+demonstrating practical understanding of object-oriented design principles.
 
 ## 📄 License
 
