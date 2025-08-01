@@ -4,7 +4,7 @@
 [![Design Patterns](https://img.shields.io/badge/Design_Patterns-Gang_of_Four-blue?style=for-the-badge)](https://en.wikipedia.org/wiki/Design_Patterns)
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](https://choosealicense.com/licenses/mit/)
 
-A comprehensive collection of **Gang of Four Design Patterns** implemented in Java, demonstrating clean code principles and object-oriented design best practices.
+A comprehensive collection of various Design Patterns implemented in Java, demonstrating clean code principles and object-oriented design best practices.
 
 ## 📋 Table of Contents
 
