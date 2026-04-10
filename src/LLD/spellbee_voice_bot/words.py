@@ -5,10 +5,5 @@ SPELL_WORDS: list[str] = [
     "definitely",
     "embarrass",
     "occurrence",
-    "parallel",
-    "rhythm",
-    "liaison",
-    "conscience",
-    "millennium",
-    "pharaoh",
+    "parallel"
 ]
