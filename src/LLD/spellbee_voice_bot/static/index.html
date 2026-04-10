@@ -3,38 +3,295 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Spell Bee Voice</title>
+  <title>Spell Bee</title>
   <style>
-    :root { font-family: system-ui, -apple-system, sans-serif; color: #1a1a1a; }
-    body { max-width: 40rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
-    h1 { font-size: 1.5rem; }
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --surface2: #243044;
+      --text: #e8edf4;
+      --muted: #8b9cb3;
+      --accent: #3d9aed;
+      --accent-dim: rgba(61, 154, 237, 0.15);
+      --success: #3ecf8e;
+      --warning: #f0b429;
+      --danger: #f07178;
+      --radius: 12px;
+      --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .wrap {
+      max-width: 28rem;
+      margin: 0 auto;
+      padding: 1.5rem 1rem 2.5rem;
+    }
+
+    header { margin-bottom: 1.25rem; }
+    header h1 {
+      font-size: 1.35rem;
+      font-weight: 600;
+      margin: 0 0 0.35rem;
+      letter-spacing: -0.02em;
+    }
+    header p {
+      margin: 0;
+      font-size: 0.875rem;
+      color: var(--muted);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
     button {
-      font: inherit; padding: 0.5rem 1rem; margin-right: 0.5rem;
-      border-radius: 6px; border: 1px solid #ccc; background: #f6f6f6; cursor: pointer;
+      font: inherit;
+      font-size: 0.9rem;
+      font-weight: 500;
+      padding: 0.55rem 1.1rem;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
     }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    #game-panel {
-      margin-top: 1.25rem; padding: 1rem; background: #f4f6f8; border-radius: 8px;
-      font-size: 0.9rem; white-space: pre-wrap;
+    button.primary {
+      background: var(--accent);
+      color: #fff;
     }
-    .muted { color: #555; font-size: 0.9rem; }
-    audio { display: block; margin-top: 1rem; width: 100%; }
+    button.primary:hover:not(:disabled) { filter: brightness(1.08); }
+    button.ghost {
+      background: var(--surface2);
+      color: var(--text);
+    }
+    button.ghost:hover:not(:disabled) { background: #2d3d56; }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .conn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8125rem;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+    .conn-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+    }
+    .conn-dot.on { background: var(--success); box-shadow: 0 0 8px rgba(62, 207, 142, 0.5); }
+
+    audio {
+      width: 100%;
+      height: 36px;
+      margin-bottom: 1rem;
+      border-radius: 6px;
+      opacity: 0.9;
+    }
+
+    .game-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.15rem;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .score-block {
+      text-align: center;
+      padding: 0.5rem 0 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .score-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+    .score-value {
+      font-size: 2.25rem;
+      font-weight: 700;
+      line-height: 1.2;
+      font-variant-numeric: tabular-nums;
+    }
+    .score-sub { font-size: 0.875rem; color: var(--muted); margin-top: 0.25rem; }
+
+    .progress-wrap { margin-top: 1rem; }
+    .progress-bar {
+      height: 6px;
+      background: var(--surface2);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), #5eb5ff);
+      border-radius: 99px;
+      transition: width 0.35s ease;
+    }
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 0.4rem;
+    }
+
+    .phase-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+    .phase-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      padding: 0.35rem 0.65rem;
+      border-radius: 99px;
+      background: var(--accent-dim);
+      color: var(--accent);
+    }
+    .phase-pill[data-tone="listen"] { background: rgba(62, 207, 142, 0.12); color: var(--success); }
+    .phase-pill[data-tone="bot"] { background: rgba(240, 180, 41, 0.12); color: var(--warning); }
+    .phase-pill[data-tone="wait"] { background: var(--surface2); color: var(--muted); }
+    .phase-pill[data-tone="done"] { background: rgba(62, 207, 142, 0.15); color: var(--success); }
+
+    .chip {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 0.2rem 0.45rem;
+      border-radius: 4px;
+      background: rgba(240, 113, 120, 0.2);
+      color: var(--danger);
+    }
+    .chip[hidden] { display: none !important; }
+
+    .panel {
+      margin-top: 0.85rem;
+      padding-top: 0.85rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 0.875rem;
+    }
+    .panel[hidden] { display: none !important; }
+
+    .panel-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+    }
+    .panel-body { color: var(--text); word-break: break-word; }
+
+    .result-ok { color: var(--success); font-weight: 600; }
+    .result-bad { color: var(--danger); font-weight: 600; }
+    .result-warn { color: var(--warning); font-weight: 600; }
+
+    .hint {
+      margin-top: 1rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    details.tech {
+      margin-top: 1rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+    details.tech summary { cursor: pointer; user-select: none; }
+    details.tech pre {
+      margin: 0.5rem 0 0;
+      padding: 0.5rem;
+      background: var(--bg);
+      border-radius: 6px;
+      overflow: auto;
+      font-size: 0.65rem;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
   </style>
 </head>
 <body>
-  <h1>Spell Bee (Pipecat)</h1>
-  <p class="muted">
-    Start a voice session over WebRTC. The bot will say a word; spell it letter by letter.
-    Allow microphone access when prompted.
-  </p>
-  <p>
-    <button type="button" id="connect">Start session</button>
-    <button type="button" id="hangup" disabled>Disconnect</button>
-  </p>
-  <p id="status" class="muted">Disconnected.</p>
-  <audio id="remote" autoplay playsinline></audio>
-  <h2 style="font-size:1rem;margin-top:1.5rem;">Game state</h2>
-  <div id="game-panel">Connect to see score and progress.</div>
+  <div class="wrap">
+    <header>
+      <h1>Spell Bee</h1>
+      <p>Listen to each word, then spell it letter by letter. Pause ~2 seconds when you’re done.</p>
+    </header>
+
+    <div class="actions">
+      <button type="button" class="primary" id="connect">Start session</button>
+      <button type="button" class="ghost" id="hangup" disabled>Disconnect</button>
+    </div>
+
+    <div class="conn" id="conn-row">
+      <span class="conn-dot" id="conn-dot"></span>
+      <span id="status">Not connected</span>
+    </div>
+
+    <audio id="remote" autoplay playsinline></audio>
+
+    <section class="game-card" id="game-card" aria-live="polite" aria-atomic="true">
+      <div class="score-block">
+        <div class="score-label">Score</div>
+        <div class="score-value" id="ui-score">—</div>
+        <div class="score-sub" id="ui-score-sub">Connect to play</div>
+      </div>
+
+      <div class="progress-wrap">
+        <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress-bar-wrap">
+          <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+        </div>
+        <div class="progress-meta">
+          <span id="ui-progress-left">Words</span>
+          <span id="ui-progress-right">0 / 0</span>
+        </div>
+      </div>
+
+      <div class="phase-row">
+        <span class="phase-pill" id="phase-pill" data-tone="wait">Waiting</span>
+        <span class="chip" id="chip-interrupt" hidden>Interrupted</span>
+      </div>
+
+      <div class="panel" id="panel-result" hidden>
+        <div class="panel-label">Last answer</div>
+        <div class="panel-body" id="panel-result-body"></div>
+      </div>
+
+      <div class="panel" id="panel-heard" hidden>
+        <div class="panel-label">What we heard</div>
+        <div class="panel-body" id="panel-heard-body"></div>
+      </div>
+
+      <div class="panel" id="panel-notice" hidden>
+        <div class="panel-label">Note</div>
+        <div class="panel-body muted" id="panel-notice-body"></div>
+      </div>
+
+      <p class="hint" id="ui-hint">
+        Tap <strong>Start session</strong>, allow the microphone, and use headphones if the room is noisy.
+      </p>
+
+      <details class="tech" id="tech-details">
+        <summary>Session details (optional)</summary>
+        <pre id="tech-pre"></pre>
+      </details>
+    </section>
+  </div>
 
   <script>
     function waitIceComplete(pc) {
@@ -51,23 +308,170 @@
       });
     }
 
+    var PHASE_LABEL = {
+      connecting: { text: 'Connecting…', tone: 'wait' },
+      starting: { text: 'Starting…', tone: 'wait' },
+      bot_speaking: { text: 'Bot is speaking', tone: 'bot' },
+      listening: { text: 'Your turn — spell the word', tone: 'listen' },
+      evaluating: { text: 'Checking your spelling…', tone: 'wait' },
+      done: { text: 'Session finished', tone: 'done' },
+    };
+
+    function phaseInfo(phase) {
+      return PHASE_LABEL[phase] || { text: phase || '…', tone: 'wait' };
+    }
+
+    function resultLabelAndClass(lastResult) {
+      if (lastResult === 'correct') return { html: '<span class="result-ok">Correct</span>', show: true };
+      if (lastResult === 'incorrect') return { html: '<span class="result-bad">Incorrect</span>', show: true };
+      if (lastResult === 'empty') return { html: '<span class="result-warn">No letters detected</span>', show: true };
+      return { html: '', show: false };
+    }
+
+    function renderState(data) {
+      var scoreEl = document.getElementById('ui-score');
+      var subEl = document.getElementById('ui-score-sub');
+      var fillEl = document.getElementById('progress-fill');
+      var prLeft = document.getElementById('ui-progress-left');
+      var prRight = document.getElementById('ui-progress-right');
+      var pill = document.getElementById('phase-pill');
+      var chipI = document.getElementById('chip-interrupt');
+      var panelResult = document.getElementById('panel-result');
+      var panelResultBody = document.getElementById('panel-result-body');
+      var panelHeard = document.getElementById('panel-heard');
+      var panelHeardBody = document.getElementById('panel-heard-body');
+      var panelNotice = document.getElementById('panel-notice');
+      var panelNoticeBody = document.getElementById('panel-notice-body');
+      var hint = document.getElementById('ui-hint');
+      var techPre = document.getElementById('tech-pre');
+
+      if (!data || typeof data !== 'object') return;
+
+      var total = data.words_total != null ? data.words_total : 0;
+      var score = data.score != null ? data.score : 0;
+      var wordNum = data.word_number != null ? data.word_number : 1;
+      var phase = data.phase || '';
+      var p = phaseInfo(phase);
+
+      scoreEl.textContent = total ? String(score) : '—';
+      if (!total) {
+        subEl.textContent = 'Connect to play';
+      } else if (phase === 'done') {
+        subEl.textContent = score + ' spelled correctly out of ' + total + ' words';
+      } else {
+        subEl.textContent = 'Word ' + wordNum + ' of ' + total + ' · ' + score + ' correct so far';
+      }
+
+      var pct = 0;
+      if (total > 0) {
+        if (phase === 'done') pct = 100;
+        else pct = Math.min(100, Math.round((wordNum / total) * 100));
+      }
+      fillEl.style.width = pct + '%';
+      var barWrap = document.getElementById('progress-bar-wrap');
+      if (barWrap) barWrap.setAttribute('aria-valuenow', String(pct));
+      prLeft.textContent = 'Where you are in the list';
+      prRight.textContent = 'Word ' + wordNum + ' of ' + total;
+
+      pill.textContent = p.text;
+      pill.setAttribute('data-tone', p.tone);
+
+      if (data.interrupted) chipI.hidden = false;
+      else chipI.hidden = true;
+
+      var rr = resultLabelAndClass(data.last_result);
+      if (rr.show && phase !== 'connecting' && phase !== 'starting') {
+        panelResult.hidden = false;
+        panelResultBody.innerHTML = rr.html;
+      } else {
+        panelResult.hidden = true;
+        panelResultBody.textContent = '';
+      }
+
+      var heardParts = [];
+      if (data.last_user_transcript && String(data.last_user_transcript).trim()) {
+        heardParts.push('“' + String(data.last_user_transcript).trim() + '”');
+      }
+      if (data.last_normalized_letters && String(data.last_normalized_letters).trim()) {
+        heardParts.push('Letters: ' + String(data.last_normalized_letters).trim());
+      }
+      var showHeard = (phase === 'listening' || phase === 'evaluating' || rr.show) && heardParts.length;
+      if (showHeard) {
+        panelHeard.hidden = false;
+        panelHeardBody.innerHTML = heardParts.join('<br/>');
+      } else if (phase === 'bot_speaking' || phase === 'done') {
+        panelHeard.hidden = true;
+      }
+
+      var msg = (data.message || '').trim();
+      var hideRoutine = msg === 'Waiting for your spelling.';
+      if (msg && !hideRoutine) {
+        panelNotice.hidden = false;
+        panelNoticeBody.textContent = msg;
+      } else if (data.interrupted && !msg) {
+        panelNotice.hidden = false;
+        panelNoticeBody.textContent = 'You spoke over the bot; listening again when the bot finishes.';
+      } else {
+        panelNotice.hidden = true;
+        panelNoticeBody.textContent = '';
+      }
+
+      if (phase === 'listening') {
+        hint.innerHTML = 'Say each letter clearly, then <strong>pause ~2 seconds</strong> when you’re done.';
+      } else if (phase === 'bot_speaking') {
+        hint.textContent = 'Listen to the prompt. You can speak over the bot only if you need to interrupt.';
+      } else if (phase === 'done') {
+        hint.textContent = 'Start a new session to play again.';
+      } else {
+        hint.innerHTML = 'Tap <strong>Start session</strong>, allow the microphone, and use headphones if the room is noisy.';
+      }
+
+      techPre.textContent = JSON.stringify(data, null, 2);
+    }
+
+    function setDisconnectedView() {
+      renderState({
+        words_total: 0,
+        words_completed: 0,
+        score: 0,
+        phase: '',
+        last_result: '',
+        last_user_transcript: '',
+        last_normalized_letters: '',
+        message: '',
+        interrupted: false,
+      });
+      document.getElementById('ui-score').textContent = '—';
+      document.getElementById('ui-score-sub').textContent = 'Connect to play';
+      document.getElementById('progress-fill').style.width = '0%';
+      var bw = document.getElementById('progress-bar-wrap');
+      if (bw) bw.setAttribute('aria-valuenow', '0');
+      document.getElementById('ui-progress-right').textContent = 'Word 0 of 0';
+      document.getElementById('phase-pill').textContent = 'Waiting';
+      document.getElementById('phase-pill').setAttribute('data-tone', 'wait');
+      document.getElementById('panel-result').hidden = true;
+      document.getElementById('panel-heard').hidden = true;
+      document.getElementById('panel-notice').hidden = true;
+    }
+
     var pc = null;
     var pcId = null;
     var pollTimer = null;
     var localStream = null;
-
-    function setGamePanel(obj) {
-      var el = document.getElementById('game-panel');
-      el.textContent = JSON.stringify(obj, null, 2);
-    }
 
     async function pollState() {
       if (!pcId) return;
       try {
         var r = await fetch('/api/game/state?pc_id=' + encodeURIComponent(pcId));
         if (!r.ok) return;
-        setGamePanel(await r.json());
+        renderState(await r.json());
       } catch (e) { /* ignore */ }
+    }
+
+    function setConnectedUi(on) {
+      var dot = document.getElementById('conn-dot');
+      if (on) dot.classList.add('on');
+      else dot.classList.remove('on');
     }
 
     document.getElementById('connect').onclick = async function () {
@@ -76,6 +480,7 @@
       var hang = document.getElementById('hangup');
       try {
         btn.disabled = true;
+        setConnectedUi(false);
         status.textContent = 'Requesting microphone…';
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         pc = new RTCPeerConnection({
@@ -88,7 +493,7 @@
         var offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
         await waitIceComplete(pc);
-        status.textContent = 'Negotiating WebRTC…';
+        status.textContent = 'Connecting…';
         var res = await fetch('/api/offer', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -101,12 +506,14 @@
         var answer = await res.json();
         pcId = answer.pc_id;
         await pc.setRemoteDescription({ sdp: answer.sdp, type: answer.type });
-        status.textContent = 'Connected. Session id: ' + pcId;
+        status.textContent = 'Connected';
+        setConnectedUi(true);
         hang.disabled = false;
         pollTimer = setInterval(pollState, 700);
         pollState();
       } catch (err) {
-        status.textContent = 'Error: ' + err;
+        status.textContent = 'Could not connect: ' + err;
+        setConnectedUi(false);
         btn.disabled = false;
         if (pc) pc.close();
         pc = null;
@@ -128,10 +535,11 @@
         localStream = null;
       }
       document.getElementById('remote').srcObject = null;
-      document.getElementById('status').textContent = 'Disconnected.';
+      document.getElementById('status').textContent = 'Not connected';
+      setConnectedUi(false);
       document.getElementById('connect').disabled = false;
       document.getElementById('hangup').disabled = true;
-      setGamePanel({ message: 'Connect to see score and progress.' });
+      setDisconnectedView();
     };
   </script>
 </body>
