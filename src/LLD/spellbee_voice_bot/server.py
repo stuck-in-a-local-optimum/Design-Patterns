@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import os
 
-# Pipecat TTS may pull NLTK sentence tokenizers; keep data inside this package.
 _pkg_dir = os.path.dirname(os.path.abspath(__file__))
 _nltk_dir = os.path.join(_pkg_dir, ".nltk_data")
 os.makedirs(_nltk_dir, exist_ok=True)
@@ -32,11 +31,13 @@ from loguru import logger
 from pipecat_ai_small_webrtc_prebuilt.frontend import SmallWebRTCPrebuiltUI
 
 from pipecat.audio.vad.silero import SileroVADAnalyzer
+from pipecat.audio.vad.vad_analyzer import VADParams
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
 from pipecat.services.cartesia.tts import CartesiaTTSService
 from pipecat.services.deepgram.stt import DeepgramSTTService
+from pipecat.transcriptions.language import Language
 from pipecat.transports.base_transport import TransportParams
 from pipecat.transports.smallwebrtc.connection import IceServer, SmallWebRTCConnection
 from pipecat.transports.smallwebrtc.transport import SmallWebRTCTransport
@@ -46,8 +47,8 @@ from words import SPELL_WORDS
 
 load_dotenv(override=True)
 
-pcs_map: Dict[str, SmallWebRTCConnection] = {}
-SESSIONS: Dict[str, GameSessionState] = {}
+pcs_map: Dict[str, SmallWebRTCConnection] = {}  # webRTC connections map object to store the connections
+SESSIONS: Dict[str, GameSessionState] = {}  # session state map object to store the session states
 
 ice_servers = [
     IceServer(
@@ -56,6 +57,23 @@ ice_servers = [
 ]
 
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+
+# Defaults to a India-region voice female voice
+_DEFAULT_CARTESIA_VOICE_IN = "7ea5e9c2-b719-4dc3-b870-5ba5f14d31d8"
+
+# Boost letter-name tokens for Deepgram en-IN spelling.
+_STT_KEYTERMS = [
+    "see",
+    "ay",
+    "tee",
+    "bee",
+    "cee",
+    "zed",
+    "aitch",
+    "double",
+    "ees",
+    "vee",
+]
 
 
 def _require_keys() -> None:
@@ -70,28 +88,52 @@ async def run_spellbee_bot(webrtc_connection: SmallWebRTCConnection) -> None:
     session = GameSessionState(pc_id=pc_id, words=list(SPELL_WORDS))
     SESSIONS[pc_id] = session
 
+    # Voice Activity Detection Processor
+    spell_vad = SileroVADAnalyzer(
+        params=VADParams(
+            start_secs=0.25,
+            stop_secs=1.0,
+            confidence=0.65,
+            min_volume=0.5,
+        ),
+    )
+
+    # WebRTC transport layer to connect WebRTC to pipeline
     transport = SmallWebRTCTransport(
         webrtc_connection=webrtc_connection,
         params=TransportParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
-            vad_analyzer=SileroVADAnalyzer(),
+            vad_analyzer=spell_vad,
         ),
     )
 
+    # Deepgram STT processor
     stt = DeepgramSTTService(
         api_key=os.environ["DEEPGRAM_API_KEY"],
+        # Barge-in is handled in SpellBeeGameProcessor (transcript-gated). Avoid Deepgram
+        # SpeechStarted + should_interrupt if vad_events is ever enabled.
+        should_interrupt=False,
         settings=DeepgramSTTService.Settings(
+            language=Language.EN_IN,
             punctuate=False,
             smart_format=False,
             interim_results=True,
+            # Align with VAD: require ~1s silence before Deepgram finalizes an utterance.
+            endpointing=1100,
+            keyterm=_STT_KEYTERMS,
         ),
     )
 
+
+    # Cartesia TTS processor
+
+    cartesia_voice = _DEFAULT_CARTESIA_VOICE_IN
     tts = CartesiaTTSService(
         api_key=os.environ["CARTESIA_API_KEY"],
         settings=CartesiaTTSService.Settings(
-            voice="71a7ad14-091c-4e8e-a314-022ece01c121",
+            voice=cartesia_voice,
+            language=Language.EN,
         ),
     )
 
@@ -111,6 +153,7 @@ async def run_spellbee_bot(webrtc_connection: SmallWebRTCConnection) -> None:
     task = PipelineTask(
         pipeline,
         params=PipelineParams(
+            allow_interruptions=True,
             enable_metrics=True,
             enable_usage_metrics=True,
         ),
@@ -197,7 +240,7 @@ def main() -> None:
     _require_keys()
     parser = argparse.ArgumentParser(description="Spell Bee Pipecat server")
     parser.add_argument("--host", default="0.0.0.0", help="Bind host")
-    parser.add_argument("--port", type=int, default=7860, help="HTTP port")
+    parser.add_argument("--port", type=int, default=8080, help="HTTP port")
     args = parser.parse_args()
     uvicorn.run(app, host=args.host, port=args.port)
 
