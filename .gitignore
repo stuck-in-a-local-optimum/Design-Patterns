@@ -52,6 +52,12 @@ coverage/
 ### Dependency directories ###
 node_modules/
 
+### Python (Spell Bee bot) ###
+.venv-spellbee/
+.env
+src/LLD/spellbee_voice_bot/.nltk_data/
+**/__pycache__/
+
 ### Optional npm cache directory ###
 .npm
 

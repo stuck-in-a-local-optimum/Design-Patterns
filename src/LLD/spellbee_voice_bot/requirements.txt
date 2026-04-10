@@ -1,0 +1,7 @@
+# Pipecat Spell Bee — install in a virtual environment (Python 3.10+).
+pipecat-ai[webrtc,silero,deepgram,cartesia]==0.0.108
+pipecat-ai-small-webrtc-prebuilt>=2.4.0
+python-dotenv>=1.0.0
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+loguru>=0.7.0

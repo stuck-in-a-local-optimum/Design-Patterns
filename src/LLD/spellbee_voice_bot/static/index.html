@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spell Bee Voice</title>
+  <style>
+    :root { font-family: system-ui, -apple-system, sans-serif; color: #1a1a1a; }
+    body { max-width: 40rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+    h1 { font-size: 1.5rem; }
+    button {
+      font: inherit; padding: 0.5rem 1rem; margin-right: 0.5rem;
+      border-radius: 6px; border: 1px solid #ccc; background: #f6f6f6; cursor: pointer;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    #game-panel {
+      margin-top: 1.25rem; padding: 1rem; background: #f4f6f8; border-radius: 8px;
+      font-size: 0.9rem; white-space: pre-wrap;
+    }
+    .muted { color: #555; font-size: 0.9rem; }
+    audio { display: block; margin-top: 1rem; width: 100%; }
+  </style>
+</head>
+<body>
+  <h1>Spell Bee (Pipecat)</h1>
+  <p class="muted">
+    Start a voice session over WebRTC. The bot will say a word; spell it letter by letter.
+    Allow microphone access when prompted.
+  </p>
+  <p>
+    <button type="button" id="connect">Start session</button>
+    <button type="button" id="hangup" disabled>Disconnect</button>
+  </p>
+  <p id="status" class="muted">Disconnected.</p>
+  <audio id="remote" autoplay playsinline></audio>
+  <h2 style="font-size:1rem;margin-top:1.5rem;">Game state</h2>
+  <div id="game-panel">Connect to see score and progress.</div>
+
+  <script>
+    function waitIceComplete(pc) {
+      if (pc.iceGatheringState === 'complete') return Promise.resolve();
+      return new Promise(function (resolve) {
+        function tick() {
+          if (pc.iceGatheringState === 'complete') {
+            pc.removeEventListener('icegatheringstatechange', tick);
+            resolve();
+          }
+        }
+        pc.addEventListener('icegatheringstatechange', tick);
+        setTimeout(resolve, 2500);
+      });
+    }
+
+    var pc = null;
+    var pcId = null;
+    var pollTimer = null;
+    var localStream = null;
+
+    function setGamePanel(obj) {
+      var el = document.getElementById('game-panel');
+      el.textContent = JSON.stringify(obj, null, 2);
+    }
+
+    async function pollState() {
+      if (!pcId) return;
+      try {
+        var r = await fetch('/api/game/state?pc_id=' + encodeURIComponent(pcId));
+        if (!r.ok) return;
+        setGamePanel(await r.json());
+      } catch (e) { /* ignore */ }
+    }
+
+    document.getElementById('connect').onclick = async function () {
+      var status = document.getElementById('status');
+      var btn = document.getElementById('connect');
+      var hang = document.getElementById('hangup');
+      try {
+        btn.disabled = true;
+        status.textContent = 'Requesting microphone…';
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        pc = new RTCPeerConnection({
+          iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+        });
+        localStream.getTracks().forEach(function (t) { pc.addTrack(t, localStream); });
+        pc.ontrack = function (ev) {
+          document.getElementById('remote').srcObject = ev.streams[0];
+        };
+        var offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        await waitIceComplete(pc);
+        status.textContent = 'Negotiating WebRTC…';
+        var res = await fetch('/api/offer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sdp: pc.localDescription.sdp,
+            type: pc.localDescription.type,
+          }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        var answer = await res.json();
+        pcId = answer.pc_id;
+        await pc.setRemoteDescription({ sdp: answer.sdp, type: answer.type });
+        status.textContent = 'Connected. Session id: ' + pcId;
+        hang.disabled = false;
+        pollTimer = setInterval(pollState, 700);
+        pollState();
+      } catch (err) {
+        status.textContent = 'Error: ' + err;
+        btn.disabled = false;
+        if (pc) pc.close();
+        pc = null;
+        if (localStream) {
+          localStream.getTracks().forEach(function (t) { t.stop(); });
+          localStream = null;
+        }
+      }
+    };
+
+    document.getElementById('hangup').onclick = function () {
+      if (pollTimer) clearInterval(pollTimer);
+      pollTimer = null;
+      pcId = null;
+      if (pc) pc.close();
+      pc = null;
+      if (localStream) {
+        localStream.getTracks().forEach(function (t) { t.stop(); });
+        localStream = null;
+      }
+      document.getElementById('remote').srcObject = null;
+      document.getElementById('status').textContent = 'Disconnected.';
+      document.getElementById('connect').disabled = false;
+      document.getElementById('hangup').disabled = true;
+      setGamePanel({ message: 'Connect to see score and progress.' });
+    };
+  </script>
+</body>
+</html>
