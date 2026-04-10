@@ -1,6 +1,6 @@
 # Spell Bee Voice Bot
 
-A small **voice spelling game** built with [Pipecat](https://github.com/pipecat-ai/pipecat): the browser sends audio over **WebRTC**, **Deepgram** transcribes speech, a Python **game processor** checks spelling (no LLM), and **Cartesia** speaks the prompts.
+A small **voice spelling game** built with [Pipecat](https://github.com/pipecat-ai/pipecat): the browser sends audio over **WebRTC**, **Deepgram** transcribes speech, a Python **game processor** checks spelling, and **Cartesia** speaks the prompts.
 
 ## Prerequisites
 
