@@ -3,7 +3,7 @@ Spell Bee voice server: FastAPI + Pipecat Small WebRTC pipeline.
 
 Run from this directory:
   pip install -r requirements.txt
-  cp env.example .env   # add DEEPGRAM_API_KEY and CARTESIA_API_KEY
+  cp env.example .env   # DEEPGRAM_*, CARTESIA_*, GEMINI_API_KEY
   python server.py
 """
 
@@ -80,6 +80,13 @@ def _require_keys() -> None:
     missing = [k for k in ("DEEPGRAM_API_KEY", "CARTESIA_API_KEY") if not os.getenv(k)]
     if missing:
         logger.error(f"Missing required environment variables: {', '.join(missing)}")
+        sys.exit(1)
+
+
+def _require_llm_spelling_config() -> None:
+    """Spelling is graded only via Google Gemini."""
+    if not os.getenv("GEMINI_API_KEY"):
+        logger.error("GEMINI_API_KEY is required (Gemini spelling evaluation).")
         sys.exit(1)
 
 
@@ -238,6 +245,7 @@ async def offer(request: dict, background_tasks: BackgroundTasks):
 
 def main() -> None:
     _require_keys()
+    _require_llm_spelling_config()
     parser = argparse.ArgumentParser(description="Spell Bee Pipecat server")
     parser.add_argument("--host", default="0.0.0.0", help="Bind host")
     parser.add_argument("--port", type=int, default=8080, help="HTTP port")

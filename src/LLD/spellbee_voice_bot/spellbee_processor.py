@@ -1,8 +1,9 @@
-"""Custom Pipecat frame processor: spelling validation and game flow."""
+"""Custom Pipecat frame processor: spelling validation and game flow (LLM-only grading)."""
 
 from __future__ import annotations
 
 import asyncio
+import os
 from dataclasses import dataclass
 from typing import Any, Optional
 
@@ -19,7 +20,7 @@ from pipecat.frames.frames import (
 )
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 
-from spelling_normalization import letters_only, spelled_from_transcript, tts_letter_by_letter
+from spelling_normalization import tts_letter_by_letter
 
 
 def merge_spelling_transcripts(prev: str, new: str) -> str:
@@ -81,7 +82,7 @@ class GameSessionState:
 
 
 class SpellBeeGameProcessor(FrameProcessor):
-    """Buffers finals until end-of-speech, validates spelling, queues TTS replies."""
+    """Buffers finals until end-of-speech; grades spelling via Google Gemini only."""
 
     # Final transcript must be at least this long to count as intentional barge-in (not VAD noise).
     _BARGE_IN_MIN_CHARS = 4
@@ -90,20 +91,21 @@ class SpellBeeGameProcessor(FrameProcessor):
         self,
         session: GameSessionState,
         task_ref: dict[str, Any],
+        *,
+        gemini_api_key: str | None = None,
         **kwargs,
     ):
         super().__init__(name="SpellBeeGame", **kwargs)
         self._session = session
         self._task_ref = task_ref
+        self._gemini_api_key = gemini_api_key if gemini_api_key is not None else os.getenv("GEMINI_API_KEY")
+        if not self._gemini_api_key:
+            raise ValueError("GEMINI_API_KEY is required for Gemini spelling evaluation.")
         self._listening_for_spell = False
-        # Merged finals across the whole spelling attempt (handles long pauses between letters).
         self._rolling_transcript: str = ""
         self._eval_task: Optional[asyncio.Task] = None
-        # Extra time after VAD end so Deepgram finalize + last letters land in the buffer.
         self._eval_delay_sec = 1.85
-        # True while output transport is playing bot TTS (from upstream Bot* frames).
         self._bot_output_active = False
-        # Barge-in: only after STT confirms real words (VAD alone fires on background noise).
         self._barge_in_interrupt_sent = False
 
     def _task(self):
@@ -121,7 +123,6 @@ class SpellBeeGameProcessor(FrameProcessor):
         if not (self._bot_output_active or self._session.phase == "bot_speaking"):
             return False
         text = (frame.text or "").strip()
-        # Deepgram emits TranscriptionFrame only for finals; keep a floor to drop noise crumbs.
         if len(text) < self._BARGE_IN_MIN_CHARS:
             return False
         return True
@@ -146,7 +147,6 @@ class SpellBeeGameProcessor(FrameProcessor):
         await self._task().queue_frames([TTSSpeakFrame(intro)])
         logger.info(f"SpellBee: Started session for word {w}")
 
-    # This method handles everything
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
 
@@ -215,20 +215,35 @@ class SpellBeeGameProcessor(FrameProcessor):
 
         raw = self._rolling_transcript
         self._rolling_transcript = ""
-        spoken = spelled_from_transcript(raw)
-        if not spoken:
-            # Whole word at once (e.g. "cat") — not in letter-name map.
-            spoken = letters_only(raw)
-        expected = letters_only(target)
-        self._session.last_normalized_letters = spoken
 
         self._session.last_user_transcript = raw
         self._listening_for_spell = False
         self._session.phase = "evaluating"
 
-        if not spoken:
+        from llm_spelling import evaluate_spelling, normalize_llm_result
+
+        try:
+            data = await evaluate_spelling(
+                raw,
+                target,
+                gemini_api_key=self._gemini_api_key,
+            )
+            norm, is_empty, is_correct = normalize_llm_result(data)
+            self._session.last_normalized_letters = norm
+        except Exception as e:
+            logger.exception(f"SpellBee: LLM eval failed: {e!s}")
+            self._session.last_result = "error"
+            self._session.last_normalized_letters = ""
+            reply = (
+                "Sorry, I could not verify your spelling right now. "
+                f"Let's try the same word again. The word is {target}. Spell it when you're ready."
+            )
+            await self._speak_only(reply)
+            return
+
+        if is_empty or not norm:
             self._session.last_result = "empty"
-            logger.debug(f"SpellBee: empty normalized spelling raw={raw!r}")
+            logger.debug(f"SpellBee: empty attempt raw={raw!r}")
             reply = (
                 "I did not catch any letters. Let's try the same word again. "
                 f"The word is {target}. Spell it when you're ready."
@@ -236,7 +251,7 @@ class SpellBeeGameProcessor(FrameProcessor):
             await self._speak_only(reply)
             return
 
-        if spoken == expected:
+        if is_correct:
             self._session.score += 1
             self._session.words_completed += 1
             self._session.last_result = "correct"

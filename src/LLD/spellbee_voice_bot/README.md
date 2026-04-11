@@ -1,13 +1,16 @@
 # Spell Bee Voice Bot
 
-A small **voice spelling game** built with [Pipecat](https://github.com/pipecat-ai/pipecat): the browser sends audio over **WebRTC**, **Deepgram** transcribes speech, a Python **game processor** checks spelling, and **Cartesia** speaks the prompts.
+A small **voice spelling game** built with [Pipecat](https://github.com/pipecat-ai/pipecat): the browser sends audio over **WebRTC**, **Deepgram** transcribes speech, **Google Gemini** **grades** each spelling attempt from the transcript, and **Cartesia** speaks the prompts.
+
+Spelling is judged **only** by Gemini (no rule-based path). Helpers in `spelling_normalization.py` format letter-by-letter TTS only.
 
 ## Prerequisites
 
 - **Python 3.10+**
-- Accounts / API keys for:
+- API keys for:
   - [Deepgram](https://deepgram.com/) (speech-to-text)
   - [Cartesia](https://cartesia.ai/) (text-to-speech)
+  - [Google Gemini](https://aistudio.google.com/apikey) (spelling evaluation; free tier available)
 - A **desktop browser** (Chrome, Firefox, or Safari) with microphone access.  
   IDE embedded previews often do not support `getUserMedia`; open the app at `http://127.0.0.1:<port>` in a normal browser.
 
@@ -35,14 +38,18 @@ pip install -r requirements.txt
 cp env.example .env
 ```
 
-Edit `.env` and set:
+Edit `.env`:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `DEEPGRAM_API_KEY` | Yes | Deepgram API key |
 | `CARTESIA_API_KEY` | Yes | Cartesia API key |
+| `GEMINI_API_KEY` | Yes | [Google AI Studio](https://aistudio.google.com/apikey) |
+| `GEMINI_MODEL` | No | Override model (default: `gemini-1.5-flash`) |
 
-The server loads `.env` from the **current working directory** when you run `python server.py`, so run the server from this folder (or ensure `.env` is discoverable by your process).
+The server loads `.env` from the **current working directory** when you run `python server.py`.
+
+**Grading:** Each finished utterance is sent to Gemini with the **target word** and **STT transcript**; the model returns JSON (`correct`, `normalized_spelling`, `empty_attempt`). If the API call **fails**, the player is asked to **try the same word again** (no score change).
 
 ## Run the server
 
@@ -50,18 +57,13 @@ The server loads `.env` from the **current working directory** when you run `pyt
 python server.py
 ```
 
-Defaults:
-
-- **Host:** `0.0.0.0`
-- **Port:** `8080`
-
-Override if needed:
+Defaults: **Host** `0.0.0.0`, **Port** `8080`.
 
 ```bash
 python server.py --host 127.0.0.1 --port 8080
 ```
 
-Then open **http://127.0.0.1:8080** in your browser, click **Start session**, and allow microphone access.
+Open **http://127.0.0.1:8080** in your browser → **Start session** → allow microphone.
 
 ## How to play
 
@@ -69,21 +71,23 @@ Then open **http://127.0.0.1:8080** in your browser, click **Start session**, an
 2. Spell it **letter by letter** (English letter names).
 3. Pause for about **two seconds** when you are done so the app can finalize your speech.
 
-Word list and behavior are defined in `words.py` and `spellbee_processor.py`.
+Words are listed in `words.py`; flow is in `spellbee_processor.py`.
 
 ## Project layout
 
 | Path | Role |
 |------|------|
-| `server.py` | FastAPI app, WebRTC `/api/offer`, game state API, Pipecat pipeline |
-| `spellbee_processor.py` | Session state, STT handling, scoring, TTS prompts |
-| `spelling_normalization.py` | Map spoken letter names to A–Z |
-| `words.py` | Words for the game |
-| `static/index.html` | Web UI and WebRTC client |
-| `env.example` | Template for `.env` (no secrets) |
+| `server.py` | FastAPI, WebRTC, Pipecat pipeline, validates `GEMINI_API_KEY` |
+| `spellbee_processor.py` | Session state, STT merge, Gemini grading, TTS prompts |
+| `llm_spelling.py` | Gemini `generateContent` HTTP call |
+| `spelling_normalization.py` | `tts_letter_by_letter` only (TTS formatting) |
+| `words.py` | Word list |
+| `static/index.html` | Web UI + WebRTC client |
+| `env.example` | Env template |
 
 ## Troubleshooting
 
-- **`Missing required environment variables`** — Set `DEEPGRAM_API_KEY` and `CARTESIA_API_KEY` in `.env` and run from the directory that contains `.env`.
-- **Microphone / WebRTC errors** — Use a real browser at `http://127.0.0.1:<port>`, not `file://`, and ensure the server is running.
-- **NLTK data** — The server sets `NLTK_DATA` to a local `.nltk_data` folder under this package; no extra step unless you override `NLTK_DATA` yourself.
+- **`GEMINI_API_KEY is required`** — Add your key from AI Studio.
+- **`Missing required environment variables`** — Deepgram / Cartesia keys.
+- **Microphone / WebRTC** — Use a real browser at `http://127.0.0.1:<port>`, not `file://`.
+- **NLTK** — Server sets `NLTK_DATA` to `.nltk_data` under this package unless you override it.
