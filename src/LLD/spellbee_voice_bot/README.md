@@ -47,7 +47,7 @@ Edit `.env`:
 | `GEMINI_API_KEY` | Yes | [Google AI Studio](https://aistudio.google.com/apikey) |
 | `GEMINI_MODEL` | No | Override model (default: `gemini-2.5-flash`; see [models](https://ai.google.dev/gemini-api/docs/models/gemini)) |
 
-The server loads `.env` from the **current working directory** when you run `python server.py`.
+The server loads `.env` from the **current working directory** when you run `python server.py`. **Run the server from this package directory** (the folder that contains `server.py`) so imports like `spellbee_processor` resolve and `.env` is found.
 
 **Grading:** Each finished utterance triggers **one** `generateContent` call (no HTTP retries, to avoid extra quota use). The model returns JSON (`correct`, `normalized_spelling`, `empty_attempt`). If the call fails (including **429** rate limit), the player is asked to **try the same word again**.
 
@@ -65,7 +65,7 @@ Defaults: **Host** `0.0.0.0`, **Port** `8080`.
 python server.py --host 127.0.0.1 --port 8080
 ```
 
-Open **http://127.0.0.1:8080** in your browser → **Start session** → allow microphone.
+Open **http://127.0.0.1:8080** in your browser → **Start session** → allow microphone. The home page serves `static/index.html` when present; otherwise you are redirected to Pipecat’s prebuilt client at **`/client/`**.
 
 ## How to play
 
@@ -79,7 +79,7 @@ Words are listed in `words.py`; flow is in `spellbee_processor.py`.
 
 | Path | Role |
 |------|------|
-| `server.py` | FastAPI, WebRTC, Pipecat pipeline, validates `GEMINI_API_KEY` |
+| `server.py` | FastAPI, WebRTC, Pipecat pipeline, validates keys; Cartesia **voice id** defaults in code (`_DEFAULT_CARTESIA_VOICE_IN`), not via `.env` |
 | `spellbee_processor.py` | Session state, STT merge, Gemini grading, TTS prompts |
 | `llm_spelling.py` | Gemini `generateContent` HTTP call |
 | `spelling_normalization.py` | `tts_letter_by_letter` only (TTS formatting) |
