@@ -45,11 +45,13 @@ Edit `.env`:
 | `DEEPGRAM_API_KEY` | Yes | Deepgram API key |
 | `CARTESIA_API_KEY` | Yes | Cartesia API key |
 | `GEMINI_API_KEY` | Yes | [Google AI Studio](https://aistudio.google.com/apikey) |
-| `GEMINI_MODEL` | No | Override model (default: `gemini-1.5-flash`) |
+| `GEMINI_MODEL` | No | Override model (default: `gemini-2.5-flash`; see [models](https://ai.google.dev/gemini-api/docs/models/gemini)) |
 
 The server loads `.env` from the **current working directory** when you run `python server.py`.
 
-**Grading:** Each finished utterance is sent to Gemini with the **target word** and **STT transcript**; the model returns JSON (`correct`, `normalized_spelling`, `empty_attempt`). If the API call **fails**, the player is asked to **try the same word again** (no score change).
+**Grading:** Each finished utterance triggers **one** `generateContent` call (no HTTP retries, to avoid extra quota use). The model returns JSON (`correct`, `normalized_spelling`, `empty_attempt`). If the call fails (including **429** rate limit), the player is asked to **try the same word again**.
+
+**404 on Gemini:** The request URL includes the model id (e.g. `.../models/gemini-2.5-flash:generateContent`). **404 means that model name is not available** for your key (often because an old id like `gemini-1.5-flash` was retired). Fix: use a current id from the [model list](https://ai.google.dev/gemini-api/docs/models/gemini), or clear `GEMINI_MODEL` so the default applies.
 
 ## Run the server
 
